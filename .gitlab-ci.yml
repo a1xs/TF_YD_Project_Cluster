@@ -1,0 +1,94 @@
+## registry.codeinside.ru/docker/ubuntu/ubuntu:22.04
+image: $UBUNTU_IMAGE:22.04
+
+stages:
+  - set
+
+variables:
+  DOCKER_DRIVER: overlay2
+  CLUSTER_ID:
+    value: ""
+    description: "ОБЯЗАТЕЛЬНАЯ ПЕРЕМЕННАЯ!!!: указываем ID кластера Kubernetes в интерфейсе YC"
+
+set_kube:
+  stage: set
+  variables:
+    CLUSTER_ID: $CLUSTER_ID
+
+  before_script:
+    - echo ${SHELL}
+    - apt update && apt install curl sudo jq gawk -y
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    - kubectl version --client
+    - curl https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -a
+    - source "${HOME}/.bashrc"
+    - ${HOME}/yandex-cloud/bin/yc --version
+    - echo $CLUSTER_ID
+  script:
+    - (echo "$TOKEN"; echo "1"; echo "n";) | ${HOME}/yandex-cloud/bin/yc init
+    - ${HOME}/yandex-cloud/bin/yc managed-kubernetes cluster get-credentials $CLUSTER_ID --external
+    - ${HOME}/yandex-cloud/bin/yc managed-kubernetes cluster get --id $CLUSTER_ID --format json | jq -r .master.master_auth.cluster_ca_certificate | awk '{gsub(/\\n/,"\n")}1' > ~/.kube/ca.pem
+    - |
+      echo -e " #
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: gc-kube-admin
+        namespace: kube-system
+      ---
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      metadata:
+        name: gc-kube-admin
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: cluster-admin
+      subjects:
+      - kind: ServiceAccount
+        name: gc-kube-admin
+        namespace: kube-system
+      ---
+      apiVersion: v1
+      kind: Secret
+      type: kubernetes.io/service-account-token
+      metadata:
+        name: gc-kube-admin-token
+        namespace: kube-system
+        annotations:
+          kubernetes.io/service-account.name: "gc-kube-admin"
+        #" > ~/.kube/sa.yaml
+        cat ~/.kube/sa.yaml
+    - kubectl apply -f ~/.kube/sa.yaml
+    - CERT_AU_DATA=$(cat ~/.kube/ca.pem | base64 --wrap=0)
+    - SA_TOKEN=$(kubectl -n kube-system get secret $(kubectl -n kube-system get secret | grep gc-kube-admin-token | awk '{print $1}') -o json | jq -r .data.token | base64 --d)
+    - MASTER_ENDPOINT=$(${HOME}/yandex-cloud/bin/yc managed-kubernetes cluster get --id $CLUSTER_ID --format json | jq -r .master.endpoints.external_v4_endpoint)
+    - |
+      echo -e " #
+      apiVersion: v1
+      clusters:
+        - cluster:
+            certificate-authority-data: $CERT_AU_DATA
+            server: $MASTER_ENDPOINT
+          name: gc-cluster
+      contexts:
+        - context:
+            cluster: gc-cluster
+            user: gc-kube-admin
+          name: yc-gc-kubernetes
+      current-context: yc-gc-kubernetes
+      kind: Config
+      preferences: {}
+      users:
+        - name: gc-kube-admin
+          user:
+            token: $SA_TOKEN
+        #" > ~/.kube/yc_config
+    - cat ~/.kube/yc_config
+  only:
+    - main
+  when: manual
+  artifacts:
+    paths:
+      - ~/.kube/yc_config

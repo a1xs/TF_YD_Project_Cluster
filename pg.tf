@@ -14,7 +14,13 @@ resource "yandex_mdb_postgresql_cluster" "database" {
   environment = "PRODUCTION"
   network_id  = yandex_vpc_network.prod-net.id
 #  security_group_ids = [yandex_vpc_security_group.DataBase-access-rules.id]
-#  deletion_protection = true
+  deletion_protection = false
+
+  timeouts {
+    create = "${var.tf_timeouts["create"]}"
+    update = "${var.tf_timeouts["update"]}"
+    delete = "${var.tf_timeouts["delete"]}"
+  }
 
   maintenance_window {
     type = "WEEKLY"
@@ -41,4 +47,10 @@ resource "yandex_mdb_postgresql_database" "pg_database" {
   cluster_id = yandex_mdb_postgresql_cluster.database.id
   name       = var.pg_database
   owner      = var.pg_user
+
+  timeouts {
+    create = "${var.tf_timeouts["create"]}"
+    update = "${var.tf_timeouts["update"]}"
+    delete = "${var.tf_timeouts["delete"]}"
+  }
 }

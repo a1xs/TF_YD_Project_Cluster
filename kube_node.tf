@@ -4,7 +4,13 @@ resource "yandex_kubernetes_node_group" "kube_node_conf" {
   count       = length(var.kube_node_conf)
   description = "node group for k8s cluster"
   version     = var.kube_version
-  
+
+  timeouts {
+    create = "${var.tf_timeouts["create"]}"
+    update = "${var.tf_timeouts["update"]}"
+    delete = "${var.tf_timeouts["delete"]}"
+  }
+
   labels = {
     "environment.type" = var.kube_node_conf[count.index].type
   }

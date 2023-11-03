@@ -4,6 +4,12 @@ resource "yandex_mdb_kafka_cluster" "kafka_cluster_simple" {
   network_id  = "${yandex_vpc_network.prod-net.id}"
   subnet_ids  = ["${yandex_vpc_subnet.b.id}"]
 
+  timeouts {
+    create = "${var.tf_timeouts["create"]}"
+    update = "${var.tf_timeouts["update"]}"
+    delete = "${var.tf_timeouts["delete"]}"
+  }
+
   maintenance_window {
     type = "WEEKLY"
     day  = "SAT"
@@ -15,7 +21,6 @@ resource "yandex_mdb_kafka_cluster" "kafka_cluster_simple" {
     brokers_count    = 1
     zones            = ["ru-central1-b"]
     assign_public_ip = false
-    unmanaged_topics = true
     schema_registry  = false
 
 
@@ -47,5 +52,30 @@ resource "yandex_mdb_kafka_cluster" "kafka_cluster_simple" {
 #        sasl_enabled_mechanisms         = ["SASL_MECHANISM_SCRAM_SHA_256", "SASL_MECHANISM_SCRAM_SHA_512"]
       }
     }
+  }
+}
+
+resource "yandex_mdb_kafka_topic" events {
+  cluster_id         = yandex_mdb_kafka_cluster.kafka_cluster_simple.id
+  for_each = toset(var.kafka_cluster_topics_name)
+  name               = "${each.key}"
+  partitions         = 1
+  replication_factor = 1
+
+  timeouts {
+    create = "${var.tf_timeouts["create"]}"
+    update = "${var.tf_timeouts["update"]}"
+    delete = "${var.tf_timeouts["delete"]}"
+  }
+}
+
+resource "yandex_mdb_kafka_user" user_events {
+  cluster_id = yandex_mdb_kafka_cluster.kafka_cluster_simple.id
+  name       = var.kafka_cluster_user
+  password   = var.kafka_cluster_password
+
+  permission {
+    topic_name = "*"
+    role       = "ACCESS_ROLE_ADMIN"
   }
 }

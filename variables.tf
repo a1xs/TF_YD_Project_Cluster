@@ -12,6 +12,16 @@ variable "folder_id" {
   default     = null
 }
 
+#variable "dynamodb_endpoint" {
+#  type        = string
+#  description = "(Required) DynamoDB endpoint."
+#  validation {
+#    condition     = var.dynamodb_endpoint != null
+#    error_message = "Endpoint is not set."
+#  }
+#  default = null
+#}
+
 variable "sa_name" {
   type        = string
   description = "The service account name"
@@ -123,4 +133,47 @@ variable "kafka_cluster_name" {
   type        = string
   description = "The name cluster of the kafka."
   default = "cluster-kafka"
+}
+
+variable "kafka_cluster_user" {
+  type        = string
+  description = "(Required) Password for the kafka."
+  validation {
+    condition     = var.kafka_cluster_user != null
+    error_message = "Password is not set."
+  }
+  default = null
+}
+
+variable "kafka_cluster_password" {
+  type        = string
+  description = "(Required) Password for the kafka."
+  validation {
+    condition     = var.kafka_cluster_password != null
+    error_message = "Password is not set."
+  }
+  default = null
+}
+
+variable "kafka_cluster_topics_name" {
+  type        = list(string)
+  description = "List topics for the kafka"
+  default     = ["gc.radio.appd",
+                 "gc.radio.chng",
+                 "gc.radio.denormalize.after",
+                 "gc.radio.denormalize.before",
+                 "gc.radio.init",
+                 "gc.radio.normalize.after",
+                 "gc.radio.normalize.before",
+                 "gc.radio.procd"
+                ]
+}
+
+variable "tf_timeouts" {
+  type = map(string)
+  default = {
+    create = "2h"
+    update = "2h"
+    delete = "2h"
+  }
 }

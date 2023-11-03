@@ -4,6 +4,12 @@ resource "yandex_kubernetes_cluster" "zonal_cluster_kubernetes" {
 
   network_id = "${yandex_vpc_network.prod-net.id}"
 
+  timeouts {
+    create = "${var.tf_timeouts["create"]}"
+    update = "${var.tf_timeouts["update"]}"
+    delete = "${var.tf_timeouts["delete"]}"
+  }
+
   master {
     version = var.kube_version
     zonal {

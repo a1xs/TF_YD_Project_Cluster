@@ -22,8 +22,8 @@ terraform {
     skip_region_validation      = true
     skip_credentials_validation = true
     key               = "infra/terraform.tfstate"
-    dynamodb_endpoint = "https://docapi.serverless.yandexcloud.net/ru-central1/b1go3en2ogsej0t5u5qc/etnmrqmkpkjgvh6adka0"
-    dynamodb_table = "gc-tfstate-db"
+    dynamodb_endpoint = "https://docapi.serverless.yandexcloud.net/ru-central1/b1gn7fpsvoeq9ld0h4hk/etn9dpc5quhsfmin2r2e"
+    dynamodb_table = "state-lock-table"
   }
 }
 
